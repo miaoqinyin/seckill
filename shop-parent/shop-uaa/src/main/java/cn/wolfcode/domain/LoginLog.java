@@ -5,7 +5,7 @@ import lombok.Setter;
 
 import java.io.Serializable;
 import java.util.Date;
-
+//学习hub
 
 @Setter@Getter
 public class LoginLog implements Serializable {
