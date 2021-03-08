@@ -42,4 +42,17 @@ public interface ISeckillProductService {
      */
 
     int decrStock(Long seckillId);
+
+    /**
+     * 回补真实库存
+     * @param seckillId
+     */
+    void incrStock(Long seckillId);
+
+    /**
+     * 回补预库存
+     * @param time 场次
+     * @param seckillId 商品id
+     */
+    void updateRedisCount(Integer time, Long seckillId);
 }

@@ -4,7 +4,10 @@ import cn.wolfcode.common.domain.UserInfo;
 import cn.wolfcode.common.exception.BusinessException;
 import cn.wolfcode.common.web.Result;
 import cn.wolfcode.common.web.anno.RequireLogin;
+import cn.wolfcode.domain.OrderInfo;
 import cn.wolfcode.domain.SeckillProductVo;
+import cn.wolfcode.mq.MQConstant;
+import cn.wolfcode.mq.OrderMessage;
 import cn.wolfcode.redis.CommonRedisKey;
 import cn.wolfcode.redis.SeckillRedisKey;
 import cn.wolfcode.service.IOrderInfoService;
@@ -40,7 +43,7 @@ public class OrderInfoController {
     @Autowired
     private IOrderInfoService orderInfoService;
 
-    public final static Map<Long,Boolean> map =  new ConcurrentHashMap<>();
+    public final static Map<Long,Boolean> local_flag =  new ConcurrentHashMap<>();
     @RequestMapping("/doSeckill")
     @RequireLogin
     public Result<String> doSeckill(int time, Long seckillId, HttpServletRequest request){
@@ -48,7 +51,7 @@ public class OrderInfoController {
        if(StringUtils.isEmpty(time+"") || StringUtils.isEmpty(seckillId)){
            throw new BusinessException(SeckillCodeMsg.SECKILL_OPERATION_ERROR);
        }
-        Boolean flag = map.get(seckillId);
+        Boolean flag = local_flag.get(seckillId);
        if(flag != null && flag){
            throw new BusinessException(SeckillCodeMsg.SECKILL_STOCK_OVER);
        }
@@ -67,9 +70,9 @@ public class OrderInfoController {
         }*/
 
         //每次秒杀,库存都-1,小于0就改变标识为true;
-        Long count = redisTemplate.opsForHash().increment(SeckillRedisKey.SECKILL_REAL_COUNT_HASH.getRealKey(time + ""), seckillId + "", -1);
+        Long count = redisTemplate.opsForHash().increment(SeckillRedisKey.SECKILL_STOCK_COUNT_HASH.getRealKey(time + ""), seckillId + "", -1);
         if(count == null && count < 0){
-            map.put(seckillId,true);
+            local_flag.put(seckillId,true);
             throw new BusinessException(SeckillCodeMsg.SECKILL_STOCK_OVER);
         }
 
@@ -77,9 +80,26 @@ public class OrderInfoController {
      if(seckillProductVo.getStockCount() <= 0){
          throw new BusinessException(SeckillCodeMsg.SECKILL_STOCK_OVER);
      }
-     //执行秒杀逻辑
-      String orderNum = orderInfoService.doSeckill(seckillId,time,userInfo.getPhone());
-     return Result.success(orderNum);
+      //执行秒杀逻辑
+      //String orderNum = orderInfoService.doSeckill(seckillId,time,userInfo.getPhone());
+     //封装数据
+     OrderMessage orderMessage = new OrderMessage();
+     orderMessage.setSeckillId(seckillId);
+     orderMessage.setTime(time);
+     orderMessage.setToken(token);
+     orderMessage.setUserPhone(userInfo.getPhone());
+
+     rocketMQTemplate.syncSend(MQConstant.ORDER_PEDDING_TOPIC,orderMessage);
+     return Result.success("正在秒杀中,请稍后!");
+    }
+
+    @RequestMapping("/find")
+    public Result<OrderInfo> find(String orderNo,HttpServletRequest request){
+
+        String token = request.getHeader("token");
+        UserInfo user = UserUtil.getUser(redisTemplate, token);
+        OrderInfo orderInfo = orderInfoService.find(orderNo,user.getPhone());
+     return Result.success(orderInfo);
     }
 
 }

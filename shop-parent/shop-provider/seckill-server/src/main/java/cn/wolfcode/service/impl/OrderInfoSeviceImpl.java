@@ -12,10 +12,10 @@ import cn.wolfcode.service.IOrderInfoService;
 import cn.wolfcode.service.ISeckillProductService;
 import cn.wolfcode.util.IdGenerateUtil;
 import cn.wolfcode.web.msg.SeckillCodeMsg;
-import org.checkerframework.checker.units.qual.A;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.Date;
 
@@ -73,5 +73,20 @@ public class OrderInfoSeviceImpl implements IOrderInfoService {
         orderInfoMapper.insert(orderInfo);
 
         return orderInfo.getOrderNo();
+    }
+
+    @Override
+    public OrderInfo find(String orderNo,Long phone) {
+        if(StringUtils.isEmpty(orderNo)){
+            throw new BusinessException(SeckillCodeMsg.SECKILL_OPERATION_ERROR);
+        }
+        OrderInfo orderInfo = orderInfoMapper.find(orderNo);
+        if(orderInfo == null){
+            throw new BusinessException(SeckillCodeMsg.SECKILL_OPERATION_ERROR);
+        }
+        if(orderInfo.getUserId() != phone){
+            throw new BusinessException(SeckillCodeMsg.SECKILL_OPERATION_ERROR);
+        }
+        return orderInfo;
     }
 }

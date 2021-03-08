@@ -17,4 +17,11 @@ public interface IOrderInfoService {
      * @return
      */
     String doSeckill(Long seckillId, int time, Long phone);
+
+    /**
+     * 根据订单号查询订单详情
+     * @param orderNo 订单号
+     * @return
+     */
+    OrderInfo find(String orderNo,Long phone);
 }

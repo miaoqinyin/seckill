@@ -95,5 +95,14 @@ public class SeckillProductServiceImpl implements ISeckillProductService {
       return seckillProductMapper.decrStock(seckillId);
     }
 
+    @Override
+    public void incrStock(Long seckillId) {
+        seckillProductMapper.incrStock(seckillId);
+    }
 
+    @Override
+    public void updateRedisCount(Integer time, Long seckillId) {
+        int count = seckillProductMapper.getStockCount(seckillId);
+        redisTemplate.opsForHash().put(SeckillRedisKey.SECKILL_STOCK_COUNT_HASH.getRealKey(time+""),seckillId+"",count+"");
+    }
 }
